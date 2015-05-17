@@ -102,6 +102,19 @@
     });
 
 
+    layer = new google.maps.FusionTablesLayer({
+      map: map,
+      heatmap: { enabled: false },
+      query: {
+        select: "col6",
+        from: "1gUbHjPLpeC4Vzi59vE5JSFfLRDtcrngyWfSn8mQC",
+        where: ""
+      },
+      options: {
+        styleId: 4,
+        templateId: 4
+      }
+    });
     if (isMobile) {
       var legend = document.getElementById('googft-legend');
       var legendOpenButton = document.getElementById('googft-legend-open');
