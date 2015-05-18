@@ -208,7 +208,7 @@ style="background-color: #000000"></span>
     var addListenersOnBasin = function(basin) {
         google.maps.event.addListener(basin, 'click', function() {
           basin['selected'] = !basin['selected']
-          this.setOptions({fillColor: basin['selected'] ? '#FF0000' : '#000000' });
+          this.setOptions({fillColor: basin['selected'] ? '#FFFF00' : '#000000' });
         });
     }
 
@@ -231,7 +231,7 @@ style="background-color: #000000"></span>
               strokeOpacity: 0.5,
               strokeWeight: 1,
               fillColor: colors[randomnumber],
-              fillOpacity: 0.1,
+              fillOpacity: 0.2,
               selected: false
             });
 
@@ -241,7 +241,7 @@ style="background-color: #000000"></span>
 	      this.setOptions({strokeWidth: 3});
             });
             google.maps.event.addListener(basin, 'mouseout', function() {
-	      this.setOptions({fillOpacity: 0.1});
+	      this.setOptions({fillOpacity: 0.2});
 	      this.setOptions({strokeOpacity: 0.5});
 	      this.setOptions({strokeWidth: 1});
             });
