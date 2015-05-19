@@ -87,10 +87,6 @@ style="background-color: #000000"></span>
     map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('googft-legend-open'));
     map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('googft-legend'));
 
-  // Load GeoJSON.
-  map.data.loadGeoJson('https://storage.googleapis.com/maps-devrel/google.json');
-
-
         // Initialize JSONP request
         var script = document.createElement('script');
         var url = ['https://www.googleapis.com/fusiontables/v2/query?'];
@@ -107,7 +103,9 @@ style="background-color: #000000"></span>
 
 
 
-
+/*
+  // Load GeoJSON.
+  map.data.loadGeoJson('https://storage.googleapis.com/maps-devrel/google.json');
 
   // [START snippet]
   // Color each letter gray. Change the color when the isColorful property
@@ -117,7 +115,7 @@ style="background-color: #000000"></span>
     if (feature.getProperty('isColorful')) {
       color = feature.getProperty('color');
     }
-    return /** @type {google.maps.Data.StyleOptions} */({
+    return ({
       fillColor: color,
       strokeColor: color,
       strokeWeight: 2
@@ -141,6 +139,7 @@ style="background-color: #000000"></span>
     map.data.revertStyle();
   });
   // [END snippet]
+*/
 
    /*
    new google.maps.FusionTablesLayer({
