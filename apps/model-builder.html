@@ -77,7 +77,7 @@
 
                     console.log(zoomLevel)
 
-                    if (zoomLevel === 1) {
+                    if (zoomLevel <= 1) {
                         basinsLayer.setOptions({query: {}});
                         basinsOutlineLayer.setOptions({query: {}});
                     } else if (zoomLevel > 1 && zoomLevel < 5) {
@@ -109,7 +109,7 @@
                     if(zoomLevel >= 6) {
                         riversLayerLarge.setMap(map);
                         riversLayer.setMap(map);
-                    } else if(zoomLevel === 1) {
+                    } else if(zoomLevel <= 1) {
                         riversLayerLarge.setMap(null);
                         riversLayer.setMap(null);
                     } else {
