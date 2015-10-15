@@ -72,23 +72,66 @@
             }
         });
 
+        var tableIdBasins = '13dShZ5yGqCEqk3dsJvYEL3lsa1hEmpMRldxK7aSa';
+
+        var selectionLat = null;
+        var selectionLng = null;
+        var selectionTableId = null;
+        var selectionOptions = null;
+        var selection = new google.maps.FusionTablesLayer(selectionOptions);;
+
+        function queryBasinByPoint(point, map) {
+            console.log(point)
+            selectionLat = point['G'];
+            selectionLng = point['K'];
+
+            selectionTableId = tableIdBasins;
+
+            selectionOptions = {
+                map : map,
+                suppressInfoWindows: true,
+                query : {
+                  select: 'geometry',
+                  from: tableIdBasins,
+                  where: 'ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + selectionLat + ', ' + selectionLng + '),1))',
+                  limit: 1
+               },
+               styles: [{
+                  polygonOptions: {
+                  fillColor: '#FFFF00',
+                  fillOpacity: 0.5,
+                  strokeColor: '#FFFF60',
+                  strokeWeight: 2
+               }}]
+        };
+
+                selection.setOptions(selectionOptions);
+
+            //var marker = new google.maps.Marker({
+            //    position: point,
+            //    map: map
+            //});
+            //markers.push(marker);
+            //map.panTo(point);
+        }
+
         google.maps.event.addListener(map, 'zoom_changed', function() {
                     var zoomLevel = map.getZoom();
-
-                    console.log(zoomLevel)
 
                     if (zoomLevel <= 1) {
                         basinsLayer.setOptions({query: {}});
                         basinsOutlineLayer.setOptions({query: {}});
                     } else if (zoomLevel > 1 && zoomLevel < 5) {
+                        tableIdBasins = '13dShZ5yGqCEqk3dsJvYEL3lsa1hEmpMRldxK7aSa';
                         basinsLayer.setOptions({
-                            query: { select: "col15", from: "13dShZ5yGqCEqk3dsJvYEL3lsa1hEmpMRldxK7aSa" },
+                            query: { select: "col15", from: tableIdBasins },
                             options: { styleId: 5, templateId: 5 }
                         }); // level 3
                         basinsOutlineLayer.setOptions({query: {}});
                     } else if (zoomLevel >= 5 && zoomLevel < 7) {
+                        tableIdBasins = '1FxGTqGlr_XTSOL8r1zp-PIOCO3S3_6i2gI-KQeQZ';
                         basinsLayer.setOptions({
-                            query: { select: "col15",from: "1FxGTqGlr_XTSOL8r1zp-PIOCO3S3_6i2gI-KQeQZ" },
+                            query: { select: "col15",from: tableIdBasins },
                             options: { styleId: 2, templateId: 2 }
                         }); // level 4
                         basinsOutlineLayer.setOptions({
@@ -96,8 +139,9 @@
                             options: { styleId: 4, templateId: 4 }
                         });
                     } else if (zoomLevel >= 7) {
+                        tableIdBasins = '1GdJzOuuAFwgcBl_hM75j6DZ83S2U1u9Z2LWJ8n_L'
                         basinsLayer.setOptions({
-                            query: { select: "col15", from: "1GdJzOuuAFwgcBl_hM75j6DZ83S2U1u9Z2LWJ8n_L" },
+                            query: { select: "col15", from: tableIdBasins },
                             options: { styleId: 2, templateId: 2 }
                         }); // level 5
                         basinsOutlineLayer.setOptions({
@@ -116,19 +160,17 @@
                         riversLayerLarge.setMap(map);
                         riversLayer.setMap(null);
                     }
+
+                    if(selection) {
+                        selection.setOptions(selectionOptions)
+                    }
                 }
         );
 
-        function queryBasinByPoint(point, map) {
-            var marker = new google.maps.Marker({
-                position: point,
-                map: map
-            });
-            markers.push(marker);
-            map.panTo(point);
-        }
-
         basinsLayer.addListener('click', function (e) {
+            queryBasinByPoint(e.latLng, map);
+        });
+        selection.addListener('click', function (e) {
             queryBasinByPoint(e.latLng, map);
         });
         basinsOutlineLayer.addListener('click', function (e) {
@@ -140,7 +182,7 @@
     }
 
     google.maps.event.addDomListener(window, 'load', initialize);
-</script>
+</script>                              	
 
 </body>
 </html>
