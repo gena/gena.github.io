@@ -10,7 +10,12 @@
         padding: 0
     }</style>
 
-    <!-- <script src="jam/require.js"></script> -->
+    <link rel="stylesheet" type="text/css" href="lib/jquery-ui.css" />
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="lib/jquery.floatingmessage.js"></script>
+
+
     <script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false&amp;v=3"></script>
 
     <!-- Import the visualization javascript -->
@@ -20,18 +25,6 @@
     <script type="text/javascript">
       google.load('visualization', '1', {});
     </script>
-
-    <script type="text/javascript">
-                function exportModel() {
-                   alert("Verdomme!");
-                }
-    </script>
-
-    <script>
-      //require(['jquery'], function ($) {
-        //$(document.body).text('Hello, world!');
-      //});  
-    </script>
 </head>
 <body>
 
@@ -40,6 +33,11 @@
 <script>
     var markers = [];
     var selection = null;
+
+    function exportModel(basinId) {
+       $('<div style="font-family: Arial; font-size: 10px; color: white">Preparing WFlow model input data for basin: ' + basinId + ' ...</div>')
+           .floatingMessage({ padding : 5, margin: 5, height : 15, position : "bottom-right" });
+    }
 
     function initialize() {
         google.maps.visualRefresh = true;
@@ -147,7 +145,7 @@
                     '<p><b>Upstream Area: </b>' + upArea + '</p>' +
                     '<p><b>Pfafstetter Id: </b>' + pfafId + '</p>' +
                     '<p/>' +
-                    '<button type="button" onclick="exportModel()">Export ...</button>'
+                    '<button type="button" onclick="exportModel( ' + basinId + ' )">Export ...</button>'
                 );
              }
 
