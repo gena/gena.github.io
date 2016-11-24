@@ -1,0 +1,60 @@
+is OpenLayers2 code, je meot even een vector layer maken waar de poly's naar toe gaan (is in de code 'drawlayer')
+
+                    var lonlat = map.getLonLatFromPixel(e.xy);
+
+                    // Convert to WGS84:
+                    lonlat.transform( map.getProjectionObject(), new OpenLayers.Projection("EPSG:4326"));
+
+          get_poly_byxy(lonlat.lon, lonlat.lat, startpostion);
+
+
+  function get_poly_byxy(lon,lat, startposxy)
+  {
+    //http://d00873:8080/nutprint/tests/frombasinpolys.php?subid=8200275
+    // Get polygons belonging to a haroid:
+
+
+  
+  console.log("add vestart");
+
+    var url = "http://v-web004.deltares.nl/switchon/php/frombasinpolys.php?lon=" + lon + "&lat=" + lat;
+      $.ajax({
+        async: true,
+        url: url,
+        dataType:"json",
+        success: function(data) {
+
+          // Import features:
+          read_json_poly(data.geojson);
+        }
+      });
+  }
+
+
+  function read_json_poly(data)
+  {
+
+    // Rest, read json poly:
+    drawlayer.destroyFeatures();
+
+    // Projection of the map:
+    var mapprojection = map.getProjectionObject();
+    
+    // We know our coords are in WGS84, we convert those:
+    var geojson_format = new OpenLayers.Format.GeoJSON({
+          externalProjection: new OpenLayers.Projection("EPSG:4326"),
+          internalProjection: mapprojection
+    });
+    
+    // Read from JSON:
+    var features = geojson_format.read(data);
+    
+
+    // Add the features:
+    drawlayer.addFeatures(features); 
+
+  }
+
+Je kan de online versie gebruiken voor de requests:
+
+http://v-web004.deltares.nl/switchon/ heb dat al aangepast in de code hierboven
