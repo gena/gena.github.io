@@ -308,6 +308,14 @@
          document.addEventListener('mousemove', function(event){
          	mouse.x	= (event.clientX / window.innerWidth ) - 0.5
          	mouse.y	= ((window.innerHeight - event.clientY) / window.innerHeight) - 0.5
+
+                // switch to window center when we're not over canvas
+                var x = event.clientX, y = event.clientY;
+                mouseOverElement = document.elementFromPoint(x, y);
+                if(mouseOverElement.nodeName != 'CANVAS') {
+                    mouse.x = 0
+                    mouse.y = 0
+                }
          }, false)
          updateFcts.push(function(delta, now){
          	camera.position.x += (mouse.x*5 - 0.5*camera.position.x) * (delta*3)
