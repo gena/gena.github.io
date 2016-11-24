@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<html>
 
 <script src='libs/three.min.js'></script>
 <script src='libs/stats.min.js'></script>
@@ -9,7 +10,6 @@
 
 <link href='style.css' rel='stylesheet'></link>
 
-<html>
 <body>
 
 <div id='info'></div>
@@ -40,12 +40,9 @@
         var speech = new SpeechSynthesisUtterance();
 
         speech.onstart = function() { 
-          console.log('start: ' + str || '<explain>');
         }
 
         speech.onend = function() { 
-          console.log('end: ' + str || '<explain>');
-          cancelling = false
         }
 
         // Set the attributes.
@@ -235,7 +232,9 @@
                 wasPlaying = true;
                 video.pause();
             } else { // seek
-                video.currentTime = value / framerate;
+                var newTime = value / framerate
+                console.log('Seeking to ' + newTime);
+                video.currentTime = newTime;
                 //video.fastSeek(parseFloat(value))
             }
         })
@@ -407,12 +406,11 @@
             })
 
             onSpeak('Welcome to the Earth AI. Right now, I\'m still learning, and can only describe sensor types used to acquire different images shown on the video, ' +
-                     ' You can select different images by dragging a frame slider and I will comment on the selected image.' +
-                     ' The video can be played by clicking on play checkbox')
+                     ' You can select different images by dragging a frame slider and I will comment on the selected image.')
 
             //onSpeak()
         });
     };
 </script>
 </body>
-</<html>>
+</html>
