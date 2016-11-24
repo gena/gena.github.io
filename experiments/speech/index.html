@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
-<script src='three.min.js'></script>
-<script src='stats.min.js'></script>
-<script src='threex.videotexture.js'></script>
-<script src='jquery.min.js'></script>
-<script src='dat.gui.min.js'></script>
+<script src='libs/three.min.js'></script>
+<script src='libs/stats.min.js'></script>
+<script src='libs/threex.videotexture.js'></script>
+<script src='libs/jquery.min.js'></script>
+<script src='libs/dat.gui.min.js'></script>
 
-<link href='style.css' rel='stylesheet'></style>
+<link href='style.css' rel='stylesheet'></link>
 
+<html>
 <body>
+
 <div id='info'></div>
 <div id='video'></div>
 
@@ -153,8 +155,8 @@
         antialias: true
     });
 
-    var url = 'multisensor-2016-04-01_2016-10-01.mp4'
-    var urlInfo = "multisensor-2016-04-01_2016-10-01_info.geojson"
+    var url = 'data/multisensor-2016-04-01_2016-10-01.mp4'
+    var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson"
     var w = 1920, h = 644
 
     //var url = "without-processing-sng.webm";
@@ -413,3 +415,4 @@
     };
 </script>
 </body>
+</<html>>
