@@ -258,7 +258,9 @@
         var speechGui = gui.add(videoOptions, 'speech');
         speechGui.onChange(function(value) {
             if(value) {
-                onSpeak();
+                if(video.paused) {
+                  onSpeak();
+                }
             } else {
                 if (window.speechSynthesis.speaking) {
                   console.log('speech canceled')
