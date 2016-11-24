@@ -7,47 +7,65 @@
 <script src='jquery.min.js'></script>
 <script src='dat.gui.min.js'></script>
 
-<style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        text-align: center;
-    }
-
-    #video {
-        position: absolute;
-        top: 0;
-        width: 100%;
-        font-family: arial, sans-serif;
-        font-weight: bolder;
-        padding-top: 5px;
-    }
-</style>
+<link href='style.css' rel='stylesheet'></style>
 
 <body>
 <div id='info'></div>
 <div id='video'></div>
 
 <script>
-    function onSpeak() {
-        if (!info || !videoOptions.speech) {
+    var speechScheduled = false
+    var cancelling = false
+
+    function onSpeak(str) {
+        if (!info || !videoOptions.speech || !('speechSynthesis' in window)) {
             return
         }
 
         if (window.speechSynthesis.speaking) {
-            window.speechSynthesis.cancel()
+            // cancel() seems to be a bit buggy, clears everything, even the future synthesis. We call cancel and than wait till speaking is done.
+            if(!cancelling) {
+                window.speechSynthesis.cancel()
+                cancelling = true
+                setTimeout(function() {onSpeak(str)}, 500)
+            }
+
+            return
         }
 
-        if ('speechSynthesis' in window) {
-            speak();
+        cancelling = false
+
+        var speech = new SpeechSynthesisUtterance();
+
+        speech.onstart = function() { 
+          console.log('start: ' + str || '<explain>');
         }
+
+        speech.onend = function() { 
+          console.log('end: ' + str || '<explain>');
+          cancelling = false
+        }
+
+        // Set the attributes.
+        speech.volume = 1;
+        speech.rate = 1;
+        speech.pitch = 1;
+        speech.voice = speechSynthesis.getVoices().filter(function (voice) {
+          return voice.name == 'native';
+        })[0];
+
+        if(str) {
+          speech.text = str
+        } else {
+          speech.text = explainImage(speech);
+        }
+
+        window.speechSynthesis.speak(speech); // queue
     }
 
-    // Create a new utterance for the specified text and add it to
-    // the queue.
-    function speak() {
-        // Create a new instance of SpeechSynthesisUtterance.
-        var msg = new SpeechSynthesisUtterance();
+    // Create a new utterance for the specified text and add it to the queue.
+    function explainImage() {
+        var str = '';
 
         // Set the text.
         var sensors = [
@@ -74,67 +92,56 @@
             return messages[index]
         }
 
-        function sayRandom(str, probability) {
+        function sayRandom(s, probability) {
             var p = Math.random()
             var decision = (p < probability)
 
             console.log(probability)
             console.log(p)
 
-            console.log('Deciding if I should say "' + str + '", P: ' + probability + ', decision: ' + decision)
-            return decision ? str : ''
+            console.log('Deciding if I should say "' + s + '", P: ' + probability + ', decision: ' + decision)
+            return decision ? s : ''
         }
 
         if (((sensor.l8 || sensor.l5 || sensor.l4 || sensor.l7) && parseFloat(properties.CLOUD_COVER) > 60) ||
             (sensor.a && parseFloat(properties.CLOUDCOVER) > 50)) {
-            msg.text += sayRandomArray([', Ooops, I see nothing, there are too many clouds.',
+            str += sayRandomArray([', Ooops, I see nothing, there are too many clouds.',
                 ', it\'s a bad time for optical sensors, too cloudy',
                 ', no way we can detect surface water here using simple spectral methods.'])
         } else {
-            msg.text = sayRandomArray(['I see ', 'This is ']) + sensorText + ' image';
+            str = sayRandomArray(['I see ', 'This is ']) + sensorText + ' image';
 
             if (sensor.l7) {
-                msg.text += sayRandom('. You can easily recognize it from black stripes crossing the image. ' +
+                str += sayRandom('. You can easily recognize it from black stripes crossing the image. ' +
                     'On May 31, 2003, the Scan Line Corrector (SLC), failed. ' +
                     'Subsequent efforts to recover the SLC were not successful, and the failure appears to be permanent.' +
                     ' The SLC-off effects are most pronounced along the edge of the scene and gradually diminish toward the center of the scene.', 0.7)
             }
 
             if (sensor.a && properties.ORIGINAL_BANDS_PRESENT.indexOf('B3N') === -1) {
-                msg.text += ' with only 90 meter resolution temperature bands available.'
+                str += ' with only 90 meter resolution temperature bands available.'
             }
 
             if (sensor.proba) {
-                msg.text += sayRandom(sayRandomArray([', the resolution is a bit crappy.', ', it\'s resolution is 100 meters']) +
-                    sayRandom('. But it still can be useful to detect surface water for larger waterbodies', 0.5)
+                str += sayRandom(sayRandomArray([', the resolution is a bit crappy.', ', it\'s resolution is 100 meters']) +
+                    sayRandom('. But the image still can be very useful for larger areas', 0.5)
                     , 0.5)
             }
 
             if (sensor.s1) {
-                msg.text += sayRandom(sayRandomArray([', It is based on a synthetic aperture radar sensor, or SAR.' +
+                str += sayRandom(sayRandomArray([', It is based on a synthetic aperture radar sensor, or SAR.' +
                 sayRandom('. Speckle noise ' + sayRandom(', all these tiny dots, ', 0.5) + 'is one of the challenges when working with SAR data.', 0.5),
                     ', it was measured by SAR sensor and can penetrate clouds and even snow. Therefore, it is very useful for monitoring of reservoirs in temperate and cold climate zones.']), 0.5)
             }
         }
 
-        console.log('speak')
-
-        // Set the attributes.
-        msg.volume = 1;
-        msg.rate = 1;
-        msg.pitch = 1;
-        msg.voice = speechSynthesis.getVoices().filter(function (voice) {
-            return voice.name == 'native';
-        })[0];
-
-        // Queue this utterance.
-        window.speechSynthesis.speak(msg);
+        return str
     }
 
     var videoOptions = new function () {
         this.speech = true;
         //this.message = url;
-        this.speed = 1;
+        this.speed = 2;
         this.frame = 1;
         this.play = false;
     };
@@ -182,26 +189,6 @@
         }
     }
 
-    var gui = new dat.GUI();
-
-    gui.add(videoOptions, 'speech');
-
-    var playGui = gui.add(videoOptions, 'play', true);
-    playGui.onChange(function (value) {
-        if (value) {
-            play()
-        } else {
-            video.pause()
-        }
-    })
-
-
-    var speedGui = gui.add(videoOptions, 'speed', 1, 30);
-
-    speedGui.onChange(function (value) {
-        videoTexture.setSpeed(value);
-    });
-
     var initialized = false;
     video.oncanplay = function () {
         if (initialized) {
@@ -212,8 +199,32 @@
 
         console.log(video.duration);
         console.log(video.duration * framerate);
-        var frameGui = gui.add(videoOptions, 'frame', 1, video.duration * framerate - 1, 1).listen();
 
+
+        var gui = new dat.GUI();
+        $(gui.__closeButton).hide()
+
+        videoTexture.setSpeed(videoOptions.speed)
+
+        var playGui = gui.add(videoOptions, 'play', true);
+        var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
+        playSpeedGui.onChange(function (value) {
+            videoTexture.setSpeed(value);
+        });
+        $(playSpeedGui.domElement.parentElement.parentElement).hide()
+
+        playGui.onChange(function (value) {
+            if (value) {
+                $(playSpeedGui.domElement.parentElement.parentElement).show()
+                play()
+            } else {
+                video.pause()
+                $(playSpeedGui.domElement.parentElement.parentElement).hide()
+                onSpeak()
+            }
+        })
+
+        var frameGui = gui.add(videoOptions, 'frame', 1, video.duration * framerate - 1, 1).listen();
         var wasPlaying = false;
         frameGui.onChange(function (value) {
             if (!video.paused) {
@@ -242,6 +253,18 @@
 
             updateInfo();
         });
+
+        var speechGui = gui.add(videoOptions, 'speech');
+        speechGui.onChange(function(value) {
+            if(value) {
+                onSpeak();
+            } else {
+                if (window.speechSynthesis.speaking) {
+                  console.log('speech canceled')
+                  window.speechSynthesis.cancel()
+                }
+            }
+        })
     }
 
     var info = null;
@@ -318,8 +341,8 @@
                 }
          }, false)
          updateFcts.push(function(delta, now){
-         	camera.position.x += (mouse.x*5 - 0.5*camera.position.x) * (delta*3)
-         	camera.position.y += (mouse.y*5 - 0.5*camera.position.y) * (delta*3)
+         	camera.position.x += (mouse.x*2 - 0.5*camera.position.x) * (delta*3)
+         	camera.position.y += (mouse.y*2 - 0.5*camera.position.y) * (delta*3)
          	camera.lookAt( scene.position )
          })
 
@@ -381,7 +404,11 @@
                 return a.properties['system:time_start'] - b.properties['system:time_start']
             })
 
-            onSpeak()
+            onSpeak('Welcome to the Earth AI. Right now, I\'m still learning, and can only describe sensor types used to acquire different images shown on the video, ' +
+                     ' You can select different images by dragging a frame slider and I will comment on the selected image.' +
+                     ' The video can be played by clicking on play checkbox')
+
+            //onSpeak()
         });
     };
 </script>
