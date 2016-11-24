@@ -25,6 +25,7 @@
 </style>
 
 <body>
+<div id='info'></div>
 <div id='video'></div>
 
 <script>
@@ -173,7 +174,7 @@
         if (info) {
             var index = Math.floor(video.currentTime)
             if (index < info.length) {
-                //$('#info').text(info[index].properties['system:id'])
+                $('#info').text(new Date(info[index].properties['system:time_start']))
             } else {
                 console.log('Bad frame index for text:' + index)
                 console.log(video.currentTime)
