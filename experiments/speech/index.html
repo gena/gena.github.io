@@ -16,8 +16,13 @@
 <div id='video'></div>
 
 <script>
-    var speechScheduled = false;
+    var url = 'data/multisensor-2016-04-01_2016-10-01_fps1.webm';
+    var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson";
+    var w = 1920, h = 644;
+
+    var info = null;
     var cancelling = false;
+    var video = null
 
     function onSpeak(str) {
         if (!info || !videoOptions.speech || !('speechSynthesis' in window)) {
@@ -26,10 +31,12 @@
 
         if (window.speechSynthesis.speaking) {
             // cancel() seems to be a bit buggy, clears everything, even the future synthesis. We call cancel and than wait till speaking is done.
-            if(!cancelling) {
+            if (!cancelling) {
                 window.speechSynthesis.cancel();
                 cancelling = true;
-                setTimeout(function() {onSpeak(str)}, 500)
+                setTimeout(function () {
+                    onSpeak(str)
+                }, 500)
             }
 
             return
@@ -39,10 +46,10 @@
 
         var speech = new SpeechSynthesisUtterance();
 
-        speech.onstart = function() { 
+        speech.onstart = function () {
         };
 
-        speech.onend = function() { 
+        speech.onend = function () {
         };
 
         // Set the attributes.
@@ -50,13 +57,13 @@
         speech.rate = 1;
         speech.pitch = 1;
         speech.voice = speechSynthesis.getVoices().filter(function (voice) {
-          return voice.name == 'native';
+            return voice.name == 'native';
         })[0];
 
-        if(str) {
-          speech.text = str
+        if (str) {
+            speech.text = str
         } else {
-          speech.text = explainImage(speech);
+            speech.text = explainImage(speech);
         }
 
         window.speechSynthesis.speak(speech); // queue
@@ -140,8 +147,7 @@
     }
 
     var videoOptions = new function () {
-        this.speech = true;
-        //this.message = url;
+        this.speech = false;
         this.speed = 2;
         this.frame = 0;
         this.play = false;
@@ -154,270 +160,269 @@
         antialias: true
     });
 
-    var url = 'data/multisensor-2016-04-01_2016-10-01_fps1.webm';
-    var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson";
-    var w = 1920, h = 644;
-
-    //var url = "without-processing-sng.webm";
-
-    // create the videoTexture
-    var videoTexture = new THREEx.VideoTexture(url, w, h);
-    var video = videoTexture.video;
-
-
-    function play() {
-        // Give the timeout enough time to avoid the race conflict.
-        var waitTime = 50;
-
-        setTimeout(function () {
-            // Resume play if the element if is paused.
-            if (video.paused) {
-                video.play()
-            }
-        }, waitTime);
-    }
-
-
-    function updateInfo() {
-        if (info) {
-            var index = Math.floor(video.currentTime);
-            if (index < info.length) {
-                $('#info').text(new Date(info[index].properties['system:time_start']))
-            } else {
-                console.log('Bad frame index for text:' + index);
-                console.log(video.currentTime)
-            }
-        }
-    }
-
-    var initialized = false;
-    video.oncanplay = function () {
-        if (initialized) {
-            return;
-        }
-
-        initialized = true;
-
-        console.log(video.duration);
-        console.log(video.duration * framerate);
-
-
-        var gui = new dat.GUI();
-        $(gui.__closeButton).hide();
-
-        videoTexture.setSpeed(videoOptions.speed);
-
-        var playGui = gui.add(videoOptions, 'play', true);
-        var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
-        playSpeedGui.onChange(function (value) {
-            videoTexture.setSpeed(value);
-        });
-        $(playSpeedGui.domElement.parentElement.parentElement).hide();
-
-        playGui.onChange(function (value) {
-            if (value) {
-                $(playSpeedGui.domElement.parentElement.parentElement).show();
-                play()
-            } else {
-                video.pause();
-                $(playSpeedGui.domElement.parentElement.parentElement).hide();
-                onSpeak()
-            }
-        });
-
-        var frameGui = gui.add(videoOptions, 'frame', 0, video.duration * framerate - 1, 1).listen();
-        var wasPlaying = false;
-        frameGui.onChange(function (value) {
-            if (!video.paused) {
-                console.log('Pause');
-
-                wasPlaying = true;
-                video.pause();
-            } else { // seek
-                var newTime = value / framerate;
-                console.log('Seeking to ' + newTime);
-                video.currentTime = newTime;
-                //video.fastSeek(parseFloat(value))
-            }
-        });
-
-        frameGui.onFinishChange(function (value) {
-            console.log('Old time: ' + video.currentTime + ' > ' + value / framerate);
-            video.currentTime = value / framerate;
-            console.log('Current time: ' + video.currentTime);
-
-            if (wasPlaying) {
-                play();
-                wasPlaying = false;
-                console.log('Play')
-            } else {
-                onSpeak();
-            }
-
-            updateInfo();
-        });
-
-        var speechGui = gui.add(videoOptions, 'speech');
-        speechGui.onChange(function(value) {
-            if(value) {
-                if(video.paused) {
-                  onSpeak();
-                }
-            } else {
-                if (window.speechSynthesis.speaking) {
-                  console.log('speech canceled');
-                  window.speechSynthesis.cancel()
-                }
-            }
-        })
-    };
-
-    var info = null;
-
     window.onload = function () {
-        //////////////////////////////////////////////////////////////////////////////////
-        //		Init
-        //////////////////////////////////////////////////////////////////////////////////
+        // create the videoTexture
+        var videoTexture = new THREEx.VideoTexture(url, w, h);
 
-        // init renderer
-        renderer.setClearColor(new THREE.Color('white'), 1);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        videoTexture.load(function () {
 
-        var updateFcts = [];
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
-        camera.position.z = 4;
+            video = videoTexture.video;
 
+            function play() {
+                // Give the timeout enough time to avoid the race conflict.
+                var waitTime = 50;
 
-        var tanFOV = Math.tan(( ( Math.PI / 180 ) * camera.fov / 2 ));
-        var windowHeight = window.innerHeight;
-
-        window.addEventListener('resize', onWindowResize, false);
-
-        function onWindowResize(event) {
-            camera.aspect = window.innerWidth / window.innerHeight;
-
-            // adjust the FOV
-            camera.fov = ( 360 / Math.PI ) * Math.atan(tanFOV * ( window.innerHeight / windowHeight ));
-
-            camera.updateProjectionMatrix();
-            camera.lookAt(scene.position);
-
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.render(scene, camera);
-
-        }
-
-        updateFcts.push(function (delta, now) {
-            videoTexture.update(delta, now)
-        });
-
-        // use the texture in a THREE.Mesh
-        console.log(video.width / video.height);
-        var geometry = new THREE.CubeGeometry(video.width / video.height, 1, 1);
-        var material = new THREE.MeshBasicMaterial({
-            map: videoTexture.texture
-        });
-        var mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-        updateFcts.push(function (delta, now) {
-            if (!video.paused) {
-                //mesh.rotation.x += 0.01 * delta + 0.01 *Math.sin(mesh.rotation.x);
-                //mesh.rotation.y += 0.02 * delta //+ 0.01 *Math.cos(mesh.rotation.y);
+                setTimeout(function () {
+                    // Resume play if the element if is paused.
+                    if (video.paused) {
+                        video.play()
+                    }
+                }, waitTime);
             }
-        });
 
 
-        //////////////////////////////////////////////////////////////////////////////////
-        //		Camera Controls							//
-        //////////////////////////////////////////////////////////////////////////////////
-        var mouse	= {x : 0, y : 0};
-         document.addEventListener('mousemove', function(event){
-         	mouse.x	= (event.clientX / window.innerWidth ) - 0.5;
-         	mouse.y	= ((window.innerHeight - event.clientY) / window.innerHeight) - 0.5;
+            function updateInfo() {
+                if (info) {
+                    var index = Math.floor(video.currentTime);
+                    if (index < info.length) {
+                        $('#info').text(new Date(info[index].properties['system:time_start']))
+                    } else {
+                        console.log('Bad frame index for text:' + index);
+                        console.log(video.currentTime)
+                    }
+                }
+            }
+
+            var initialized = false;
+            video.oncanplay = function () {
+                if (initialized) {
+                    return;
+                }
+
+                initialized = true;
+
+                console.log(video.duration);
+                console.log(video.duration * framerate);
+
+
+                var gui = new dat.GUI();
+                $(gui.__closeButton).hide();
+
+                videoTexture.setSpeed(videoOptions.speed);
+
+                var playGui = gui.add(videoOptions, 'play', true);
+                var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
+                playSpeedGui.onChange(function (value) {
+                    videoTexture.setSpeed(value);
+                });
+                $(playSpeedGui.domElement.parentElement.parentElement).hide();
+
+                playGui.onChange(function (value) {
+                    if (value) {
+                        $(playSpeedGui.domElement.parentElement.parentElement).show();
+                        play()
+                    } else {
+                        video.pause();
+                        $(playSpeedGui.domElement.parentElement.parentElement).hide();
+                        onSpeak()
+                    }
+                });
+
+
+                var frameGui = gui.add(videoOptions, 'frame',
+                    0,
+                    video.duration * framerate - 2 /* video does not seek to the last frame? */,
+                    1).listen();
+                var wasPlaying = false;
+                frameGui.onChange(function (value) {
+                    if (!video.paused) {
+                        console.log('Pause');
+
+                        wasPlaying = true;
+                        video.pause();
+                    } else { // seek
+                        var newTime = value / framerate;
+                        console.log('Seeking to ' + newTime);
+                        video.currentTime = newTime;
+                        //video.fastSeek(parseFloat(value))
+                    }
+                });
+
+                frameGui.onFinishChange(function (value) {
+                    console.log('Old time: ' + video.currentTime + ' > ' + value / framerate);
+                    video.currentTime = value / framerate;
+                    console.log('Current time: ' + video.currentTime);
+
+                    if (wasPlaying) {
+                        play();
+                        wasPlaying = false;
+                        console.log('Play')
+                    } else {
+                        onSpeak();
+                    }
+
+                    updateInfo();
+                });
+
+                var speechGui = gui.add(videoOptions, 'speech');
+                speechGui.onChange(function (value) {
+                    if (value) {
+                        if (video.paused) {
+                            onSpeak();
+                        }
+                    } else {
+                        if (window.speechSynthesis.speaking) {
+                            console.log('speech canceled');
+                            window.speechSynthesis.cancel()
+                        }
+                    }
+                })
+            }
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		Init
+            //////////////////////////////////////////////////////////////////////////////////
+
+            // init renderer
+            renderer.setClearColor(new THREE.Color('white'), 1);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            var updateFcts = [];
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+            camera.position.z = 4;
+
+
+            var tanFOV = Math.tan(( ( Math.PI / 180 ) * camera.fov / 2 ));
+            var windowHeight = window.innerHeight;
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            function onWindowResize(event) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+
+                // adjust the FOV
+                camera.fov = ( 360 / Math.PI ) * Math.atan(tanFOV * ( window.innerHeight / windowHeight ));
+
+                camera.updateProjectionMatrix();
+                camera.lookAt(scene.position);
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.render(scene, camera);
+
+            }
+
+            updateFcts.push(function (delta, now) {
+                videoTexture.update(delta, now)
+            });
+
+            // use the texture in a THREE.Mesh
+            console.log(video.videoWidth + "x" + video.videoHeight);
+            var geometry = new THREE.CubeGeometry(video.videoWidth / video.videoHeight, 1, 1);
+            var material = new THREE.MeshBasicMaterial({
+                map: videoTexture.texture
+            });
+            var mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            updateFcts.push(function (delta, now) {
+                if (!video.paused) {
+                    //mesh.rotation.x += 0.01 * delta + 0.01 *Math.sin(mesh.rotation.x);
+                    //mesh.rotation.y += 0.02 * delta //+ 0.01 *Math.cos(mesh.rotation.y);
+                }
+            });
+
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		Camera Controls							//
+            //////////////////////////////////////////////////////////////////////////////////
+            var mouse = {x: 0, y: 0};
+            document.addEventListener('mousemove', function (event) {
+                mouse.x = (event.clientX / window.innerWidth ) - 0.5;
+                mouse.y = ((window.innerHeight - event.clientY) / window.innerHeight) - 0.5;
 
                 // switch to window center when we're not over canvas
                 var x = event.clientX, y = event.clientY;
                 mouseOverElement = document.elementFromPoint(x, y);
-                if(mouseOverElement.nodeName != 'CANVAS') {
+                if (mouseOverElement.nodeName != 'CANVAS') {
                     mouse.x = 0;
                     mouse.y = 0
                 }
-         }, false);
-         updateFcts.push(function(delta, now){
-         	camera.position.x += (mouse.x*2 - 0.5*camera.position.x) * (delta*3);
-         	camera.position.y += (mouse.y*2 - 0.5*camera.position.y) * (delta*3);
-         	camera.lookAt( scene.position )
-         });
-
-        //////////////////////////////////////////////////////////////////////////////////
-        //		render the scene						//
-        //////////////////////////////////////////////////////////////////////////////////
-
-        // init Stats
-        var stats = new Stats();
-        document.body.appendChild(stats.domElement);
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.left = '0px';
-        stats.domElement.style.bottom = '0px';
-        updateFcts.push(function () {
-            stats.update()
-        });
-
-
-        updateFcts.push(function () {
-            renderer.render(scene, camera);
-        });
-
-        //////////////////////////////////////////////////////////////////////////////////
-        //		loop runner							//
-        //////////////////////////////////////////////////////////////////////////////////
-        var lastTimeMsec = null;
-        requestAnimationFrame(function animate(nowMsec) {
-            if (!video.paused) {
-                videoOptions.frame = parseInt(video.currentTime)
-            }
-
-            if (video.currentTime >= video.duration * framerate - 1) {
-                video.currentTime = 0
-            }
-
-            updateInfo();
-
-            // keep looping
-            requestAnimationFrame(animate);
-
-            // measure time
-            lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
-            var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
-            lastTimeMsec = nowMsec;
-
-            // call each update function
-            updateFcts.forEach(function (updateFn) {
-                updateFn(deltaMsec / 1000, nowMsec / 1000)
-            })
-        });
-
-        // video.play()
-
-        // get metainfo
-        $.getJSON(urlInfo, function (json) {
-            console.log('Json loaded');
-            info = json.features;
-
-            /*
-            info.sort(function (a, b) {
-                return a.properties['system:time_start'] - b.properties['system:time_start']
+            }, false);
+            updateFcts.push(function (delta, now) {
+                camera.position.x += (mouse.x * 2 - 0.5 * camera.position.x) * (delta * 3);
+                camera.position.y += (mouse.y * 2 - 0.5 * camera.position.y) * (delta * 3);
+                camera.lookAt(scene.position)
             });
-            */
 
-            /*
-            onSpeak('Welcome to the Earth AI. Right now, I\'m still learning, and can only describe sensor types used to acquire different images shown on the video, ' +
-                     ' You can select different images by dragging a frame slider and I will comment on the selected image.');
-            */
+            //////////////////////////////////////////////////////////////////////////////////
+            //		render the scene						//
+            //////////////////////////////////////////////////////////////////////////////////
 
-            //onSpeak()
+            // init Stats
+            var stats = new Stats();
+            document.body.appendChild(stats.domElement);
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.left = '0px';
+            stats.domElement.style.bottom = '0px';
+            updateFcts.push(function () {
+                stats.update()
+            });
+
+
+            updateFcts.push(function () {
+                renderer.render(scene, camera);
+            });
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		loop runner							//
+            //////////////////////////////////////////////////////////////////////////////////
+            var lastTimeMsec = null;
+            requestAnimationFrame(function animate(nowMsec) {
+                if (!video.paused) {
+                    videoOptions.frame = parseInt(video.currentTime)
+                }
+
+                if (video.currentTime >= video.duration * framerate - 1) {
+                    video.currentTime = 0
+                }
+
+                updateInfo();
+
+                // keep looping
+                requestAnimationFrame(animate);
+
+                // measure time
+                lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
+                var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+                lastTimeMsec = nowMsec;
+
+                // call each update function
+                updateFcts.forEach(function (updateFn) {
+                    updateFn(deltaMsec / 1000, nowMsec / 1000)
+                })
+            });
+
+            // video.play()
+
+            // get metainfo
+            $.getJSON(urlInfo, function (json) {
+                console.log('Json loaded');
+                info = json.features;
+
+                /*
+                 info.sort(function (a, b) {
+                 return a.properties['system:time_start'] - b.properties['system:time_start']
+                 });
+                 */
+
+                /*
+                 onSpeak('Welcome to the Earth AI. Right now, I\'m still learning, and can only describe sensor types used to acquire different images shown on the video, ' +
+                 ' You can select different images by dragging a frame slider and I will comment on the selected image.');
+                 */
+
+                //onSpeak()
+            });
         });
     };
 </script>

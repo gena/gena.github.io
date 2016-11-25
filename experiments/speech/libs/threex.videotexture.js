@@ -1,41 +1,44 @@
-var THREEx = THREEx || {}
+var THREEx = THREEx || {};
 
-THREEx.VideoTexture	= function(url, w, h){
-	// create the video element
-	var video	= document.createElement('video');
-	video.src	= url;
+THREEx.VideoTexture = function (url) {
+    // create the video element
+    var video = document.createElement('video');
+    video.src = url;
 
-        video.defaultPlaybackRate = 1.0;
-        video.load();
+    video.defaultPlaybackRate = 1.0;
 
-        video.width = w
-        video.height = h
+    // expose video as this.video
+    this.video = video;
 
+    // create the texture
+    this.texture = new THREE.Texture(video);
 
-	// expose video as this.video
-	this.video	= video
+    this.load = function (onloaded) {
+        video.onloadeddata = function () {
+            video.width = video.videoWidth;
+            video.height = video.videoHeight;
+            onloaded()
+        };
 
-	// create the texture
-	var texture	= new THREE.Texture( video );
-	// expose texture as this.texture
-	this.texture	= texture
+        this.video.load()
+    };
 
-	/**
-	 * update the object
-	 */
-	this.update	= function(){
-		if( video.readyState !== video.HAVE_ENOUGH_DATA )	return;
-		texture.needsUpdate	= true;		
-	}
+    /**
+     * update the object
+     */
+    this.update = function () {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA)    return;
+        this.texture.needsUpdate = true;
+    };
 
-	/**
-	 * destroy the object
-	 */
-	this.destroy	= function(){
-		video.pause()
-	}
+    /**
+     * destroy the object
+     */
+    this.destroy = function () {
+        video.pause()
+    };
 
-        this.setSpeed = function(speed) {
-          video.playbackRate = speed;
-        }
-}
+    this.setSpeed = function (speed) {
+        video.playbackRate = speed;
+    }
+};
