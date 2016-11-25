@@ -210,30 +210,26 @@
 
                 videoTexture.setSpeed(videoOptions.speed);
 
-                var playGui = gui.add(videoOptions, 'play', true);
-                var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
-                playSpeedGui.onChange(function (value) {
-                    videoTexture.setSpeed(value);
-                });
-                $(playSpeedGui.domElement.parentElement.parentElement).hide();
-
-                playGui.onChange(function (value) {
+                var speechGui = gui.add(videoOptions, 'speech');
+                speechGui.onChange(function (value) {
                     if (value) {
-                        $(playSpeedGui.domElement.parentElement.parentElement).show();
-                        play()
+                        if (video.paused) {
+                            onSpeak();
+                        }
                     } else {
-                        video.pause();
-                        $(playSpeedGui.domElement.parentElement.parentElement).hide();
-                        onSpeak()
+                        if (window.speechSynthesis.speaking) {
+                            console.log('speech canceled');
+                            window.speechSynthesis.cancel()
+                        }
                     }
                 });
-
 
                 var frameGui = gui.add(videoOptions, 'frame',
                     0,
                     video.duration * framerate - 2 /* video does not seek to the last frame? */,
                     1).listen();
                 var wasPlaying = false;
+
                 frameGui.onChange(function (value) {
                     if (!video.paused) {
                         console.log('Pause');
@@ -264,20 +260,25 @@
                     updateInfo();
                 });
 
-                var speechGui = gui.add(videoOptions, 'speech');
-                speechGui.onChange(function (value) {
+                var playGui = gui.add(videoOptions, 'play', true);
+
+                playGui.onChange(function (value) {
                     if (value) {
-                        if (video.paused) {
-                            onSpeak();
-                        }
+                        $(playSpeedGui.domElement.parentElement.parentElement).show();
+                        play()
                     } else {
-                        if (window.speechSynthesis.speaking) {
-                            console.log('speech canceled');
-                            window.speechSynthesis.cancel()
-                        }
+                        video.pause();
+                        $(playSpeedGui.domElement.parentElement.parentElement).hide();
+                        onSpeak()
                     }
-                })
-            }
+                });
+
+                var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
+                playSpeedGui.onChange(function (value) {
+                    videoTexture.setSpeed(value);
+                });
+                $(playSpeedGui.domElement.parentElement.parentElement).hide();
+            };
 
             //////////////////////////////////////////////////////////////////////////////////
             //		Init
