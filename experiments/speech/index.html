@@ -16,8 +16,18 @@
 <div id='video'></div>
 
 <script>
-    var url = 'data/multisensor-2016-04-01_2016-10-01_fps1.webm';
-    var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson";
+    //var url = 'data/multisensor-2016-04-01_2016-10-01_fps1.webm';
+    //var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson";
+    
+    //var url = 'data/multisensor-AF-1985-01-01_2016-12-01_fps1.webm';
+    //var urlInfo = "data/multisensor-AF-1985-01-01_2016-12-01_info.geojson";
+
+    var url = 'data/cloudfree2/multisensor-1984-01-01_2018-01-01_fps1.webm';
+    var urlInfo = "data/cloudfree2/multisensor-1984-01-01_2018-01-01_info.geojson";
+
+
+
+
     var w = 1920, h = 644;
 
     var info = null;
@@ -112,7 +122,7 @@
         }
 
         if (((sensor.l8 || sensor.l5 || sensor.l4 || sensor.l7) && parseFloat(properties.CLOUD_COVER) > 60) ||
-            (sensor.a && parseFloat(properties.CLOUDCOVER) > 50)) {
+            (sensor.a && !properties.cloud_pixels && parseFloat(properties.CLOUDCOVER) > 50)) {
             str += sayRandomArray([', Ooops, I see nothing, there are too many clouds.',
                 ', it\'s a bad time for optical sensors, too cloudy',
                 ', no way we can detect surface water here using simple spectral methods.'])
@@ -141,6 +151,10 @@
                 sayRandom('. Speckle noise ' + sayRandom(', all these tiny dots, ', 0.5) + 'is one of the challenges when working with SAR data.', 0.5),
                     ', it was measured by SAR sensor and can penetrate clouds and even snow. Therefore, it is very useful for monitoring of reservoirs in temperate and cold climate zones.']), 0.5)
             }
+        }
+
+        if(properties.water_area) {
+            str += ',, the reservoir surface area is ' + parseFloat((Math.round(parseFloat(properties.water_area)*1e-5)*0.1).toFixed(2)) + ' square kilometers'
         }
 
         return str
@@ -185,7 +199,13 @@
                 if (info) {
                     var index = Math.floor(video.currentTime);
                     if (index < info.length) {
-                        $('#info').text(new Date(info[index].properties['system:time_start']))
+                        var str = new Date(info[index].properties['system:time_start'])
+                        str += '<br>' + info[index].properties['system:id']
+                        if(info[index].properties.water_area) {
+                            str += '<br>Surface area: ' + parseFloat((Math.round(parseFloat(info[index].properties.water_area)*1e-5)*0.1).toFixed(2)) + ' km2'
+                        }
+
+                        $('#info').html(str)
                     } else {
                         console.log('Bad frame index for text:' + index);
                         console.log(video.currentTime)
@@ -351,9 +371,32 @@
                 }
             }, false);
             updateFcts.push(function (delta, now) {
-                camera.position.x += (mouse.x * 2 - 0.5 * camera.position.x) * (delta * 3);
-                camera.position.y += (mouse.y * 2 - 0.5 * camera.position.y) * (delta * 3);
+                camera.position.x += (mouse.x * 0.3 * camera.position.z - 0.5 * camera.position.x) * (delta * 3) ;
+                camera.position.y += (mouse.y * 0.3 * camera.position.z - 0.5 * camera.position.y ) * (delta * 3) ;
                 camera.lookAt(scene.position)
+            });
+
+            $('body').on('mousewheel', function (e){
+                var mouseX = (e.clientX - (window.innerWidth/2)) * 10;
+                var mouseY = (e.clientY - (window.innerHeight/2)) * 10;
+      
+                if(e.originalEvent.deltaY < 0){ // zoom to the front
+                  if(camera.position.z > 10) {
+                    return
+                  }
+                  //camera.position.x -= mouseX * .00125;
+                  //camera.position.y += mouseY * .00125;
+                  camera.position.z += 1.1 * 0.1;
+                } else {                          // zoom to the back
+                if(camera.position.z < 2) {
+                  return
+                }
+                //camera.position.x += mouseX * .00125;
+                //camera.position.y -= mouseY * .00125;
+                camera.position.z -= 1.1 * 0.1;
+              }
+
+              console.log(camera.position.z)
             });
 
             //////////////////////////////////////////////////////////////////////////////////
@@ -415,11 +458,6 @@
                  info.sort(function (a, b) {
                  return a.properties['system:time_start'] - b.properties['system:time_start']
                  });
-                 */
-
-                /*
-                 onSpeak('Welcome to the Earth AI. Right now, I\'m still learning, and can only describe sensor types used to acquire different images shown on the video, ' +
-                 ' You can select different images by dragging a frame slider and I will comment on the selected image.');
                  */
 
                 //onSpeak()
