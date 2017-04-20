@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<html>
+
+<script src='libs/three.min.js'></script>
+<script src='libs/stats.min.js'></script>
+<script src='libs/threex.videotexture.js'></script>
+<script src='libs/jquery.min.js'></script>
+<script src='libs/dat.gui.min.js'></script>
+
+<link href='style.css' rel='stylesheet'></link>
+
+<body>
+
+<div id='info'></div>
+<div id='video'></div>
+
+<script>
+    //var url = 'data/multisensor-2016-04-01_2016-10-01_fps1.webm';
+    //var urlInfo = "data/multisensor-2016-04-01_2016-10-01_info.geojson";
+    
+    //var url = 'data/multisensor-AF-1985-01-01_2016-12-01_fps1.webm';
+    //var urlInfo = "data/multisensor-AF-1985-01-01_2016-12-01_info.geojson";
+
+    var url = 'data/cloudfree2/multisensor-1984-01-01_2018-01-01_fps1.webm';
+    var urlInfo = "data/cloudfree2/multisensor-1984-01-01_2018-01-01_info.geojson";
+
+
+
+
+    var w = 1920, h = 644;
+
+    var info = null;
+    var cancelling = false;
+    var video = null
+
+    function onSpeak(str) {
+        if (!info || !videoOptions.speech || !('speechSynthesis' in window)) {
+            return
+        }
+
+        if (window.speechSynthesis.speaking) {
+            // cancel() seems to be a bit buggy, clears everything, even the future synthesis. We call cancel and than wait till speaking is done.
+            if (!cancelling) {
+                window.speechSynthesis.cancel();
+                cancelling = true;
+                setTimeout(function () {
+                    onSpeak(str)
+                }, 500)
+            }
+
+            return
+        }
+
+        cancelling = false;
+
+        var speech = new SpeechSynthesisUtterance();
+
+        speech.onstart = function () {
+        };
+
+        speech.onend = function () {
+        };
+
+        // Set the attributes.
+        speech.volume = 1;
+        speech.rate = 1;
+        speech.pitch = 1;
+        speech.voice = speechSynthesis.getVoices().filter(function (voice) {
+            return voice.name == 'native';
+        })[0];
+
+        if (str) {
+            speech.text = str
+        } else {
+            speech.text = explainImage(speech);
+        }
+
+        window.speechSynthesis.speak(speech); // queue
+    }
+
+    // Create a new utterance for the specified text and add it to the queue.
+    function explainImage() {
+        var str = '';
+
+        // Set the text.
+        var sensors = [
+            {pattern: 'VITO/PROBAV', text: 'proba v', proba: true},
+            {pattern: 'COPERNICUS/S1_GRD', text: 'sentinel one', s1: true},
+            {pattern: 'COPERNICUS/S2', text: 'sentinel two', s2: true},
+            {pattern: 'ASTER', text: 'aster', a: true},
+            {pattern: 'LANDSAT/LC8', text: 'Landsat eight', l8: true},
+            {pattern: 'LANDSAT/LE7', text: 'Landsat seven', l7: true},
+            {pattern: 'LANDSAT/LT5', text: 'Landsat five', l5: true},
+            {pattern: 'LANDSAT/LT4', text: 'Landsat four', l4: true},
+        ];
+
+        var properties = info[parseInt(video.currentTime)].properties;
+        // var id = properties['system:id'];
+        var name = properties.info.asset;
+        var sensor = sensors.filter(function (sensor) {
+            return name.search(sensor.pattern) != -1;
+            // return id.search(sensor.pattern) != -1;
+        })[0];
+
+        var sensorText = sensor.text;
+
+        function sayRandomArray(messages) {
+            var index = Math.floor(Math.random() * messages.length);
+            return messages[index]
+        }
+
+        function sayRandom(s, probability) {
+            var p = Math.random();
+            var decision = (p < probability);
+
+            console.log(probability);
+            console.log(p);
+
+            console.log('Deciding if I should say "' + s + '", P: ' + probability + ', decision: ' + decision);
+            return decision ? s : ''
+        }
+
+        if (((sensor.l8 || sensor.l5 || sensor.l4 || sensor.l7) && parseFloat(properties.CLOUD_COVER) > 60) ||
+            (sensor.a && !properties.cloud_pixels && parseFloat(properties.CLOUDCOVER) > 50)) {
+            str += sayRandomArray([', Ooops, I see nothing, there are too many clouds.',
+                ', it\'s a bad time for optical sensors, too cloudy',
+                ', no way we can detect surface water here using simple spectral methods.'])
+        } else {
+            str = sayRandomArray(['I see ', 'This is ']) + sensorText + ' image';
+
+            if (sensor.l7) {
+                str += sayRandom('. You can easily recognize it from black stripes crossing the image. ' +
+                    'On May 31, 2003, the Scan Line Corrector (SLC), failed. ' +
+                    'Subsequent efforts to recover the SLC were not successful, and the failure appears to be permanent.' +
+                    ' The SLC-off effects are most pronounced along the edge of the scene and gradually diminish toward the center of the scene.', 0.7)
+            }
+
+            if (sensor.a && properties.ORIGINAL_BANDS_PRESENT.indexOf('B3N') === -1) {
+                str += ' with only 90 meter resolution temperature bands available.'
+            }
+
+            if (sensor.proba) {
+                str += sayRandom(sayRandomArray([', the resolution is a bit crappy.', ', it\'s resolution is 100 meters']) +
+                    sayRandom('. But it is measured daily and still can be very useful to study land surface changes for larger areas', 0.5)
+                    , 0.5)
+            }
+
+            if (sensor.s1) {
+                str += sayRandom(sayRandomArray([', It is based on a synthetic aperture radar sensor, or SAR.' +
+                sayRandom('. Speckle noise ' + sayRandom(', all these tiny dots, ', 0.5) + 'is one of the challenges when working with SAR data.', 0.5),
+                    ', it was measured by SAR sensor and can penetrate clouds and even snow. Therefore, it is very useful for monitoring of reservoirs in temperate and cold climate zones.']), 0.5)
+            }
+        }
+
+        if(properties.water_area) {
+            str += ',, the reservoir surface area is ' + parseFloat((Math.round(parseFloat(properties.water_area)*1e-5)*0.1).toFixed(2)) + ' square kilometers'
+        }
+
+        return str
+    }
+
+    var videoOptions = new function () {
+        this.speech = false;
+        this.speed = 2;
+        this.frame = 0;
+        this.play = false;
+    };
+
+    var framerate = 1;
+
+    var renderer = new THREE.WebGLRenderer({
+        //canvas: container,
+        antialias: true
+    });
+
+    window.onload = function () {
+        // create the videoTexture
+        var videoTexture = new THREEx.VideoTexture(url, w, h);
+
+        videoTexture.load(function () {
+
+            video = videoTexture.video;
+
+            function play() {
+                // Give the timeout enough time to avoid the race conflict.
+                var waitTime = 50;
+
+                setTimeout(function () {
+                    // Resume play if the element if is paused.
+                    if (video.paused) {
+                        video.play()
+                    }
+                }, waitTime);
+            }
+
+
+            function updateInfo() {
+                if (info) {
+                    var index = Math.floor(video.currentTime);
+                    if (index < info.length) {
+                        var str = new Date(info[index].properties['system:time_start'])
+                        str += '<br>' + info[index].properties['system:id']
+                        if(info[index].properties.water_area) {
+                            str += '<br>Surface area: ' + parseFloat((Math.round(parseFloat(info[index].properties.water_area)*1e-5)*0.1).toFixed(2)) + ' km2'
+                        }
+
+                        $('#info').html(str)
+                    } else {
+                        console.log('Bad frame index for text:' + index);
+                        console.log(video.currentTime)
+                    }
+                }
+            }
+
+            var initialized = false;
+            video.oncanplay = function () {
+                if (initialized) {
+                    return;
+                }
+
+                initialized = true;
+
+                console.log(video.duration);
+                console.log(video.duration * framerate);
+
+
+                var gui = new dat.GUI();
+                $(gui.__closeButton).hide();
+
+                videoTexture.setSpeed(videoOptions.speed);
+
+                var speechGui = gui.add(videoOptions, 'speech');
+                speechGui.onChange(function (value) {
+                    if (value) {
+                        if (video.paused) {
+                            onSpeak();
+                        }
+                    } else {
+                        if (window.speechSynthesis.speaking) {
+                            console.log('speech canceled');
+                            window.speechSynthesis.cancel()
+                        }
+                    }
+                });
+
+                var frameGui = gui.add(videoOptions, 'frame',
+                    0,
+                    video.duration * framerate - 2 /* video does not seek to the last frame? */,
+                    1).listen();
+                var wasPlaying = false;
+
+                frameGui.onChange(function (value) {
+                    if (!video.paused) {
+                        console.log('Pause');
+
+                        wasPlaying = true;
+                        video.pause();
+                    } else { // seek
+                        var newTime = value / framerate;
+                        console.log('Seeking to ' + newTime);
+                        video.currentTime = newTime;
+                        //video.fastSeek(parseFloat(value))
+                    }
+                });
+
+                frameGui.onFinishChange(function (value) {
+                    console.log('Old time: ' + video.currentTime + ' > ' + value / framerate);
+                    video.currentTime = value / framerate;
+                    console.log('Current time: ' + video.currentTime);
+
+                    if (wasPlaying) {
+                        play();
+                        wasPlaying = false;
+                        console.log('Play')
+                    } else {
+                        onSpeak();
+                    }
+
+                    updateInfo();
+                });
+
+                var playGui = gui.add(videoOptions, 'play', true);
+
+                playGui.onChange(function (value) {
+                    if (value) {
+                        $(playSpeedGui.domElement.parentElement.parentElement).show();
+                        play()
+                    } else {
+                        video.pause();
+                        $(playSpeedGui.domElement.parentElement.parentElement).hide();
+                        onSpeak()
+                    }
+                });
+
+                var playSpeedGui = gui.add(videoOptions, 'speed', 1, 30);
+                playSpeedGui.onChange(function (value) {
+                    videoTexture.setSpeed(value);
+                });
+                $(playSpeedGui.domElement.parentElement.parentElement).hide();
+            };
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		Init
+            //////////////////////////////////////////////////////////////////////////////////
+
+            // init renderer
+            renderer.setClearColor(new THREE.Color('white'), 1);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            var updateFcts = [];
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+            camera.position.z = 4;
+
+
+            var tanFOV = Math.tan(( ( Math.PI / 180 ) * camera.fov / 2 ));
+            var windowHeight = window.innerHeight;
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            function onWindowResize(event) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+
+                // adjust the FOV
+                camera.fov = ( 360 / Math.PI ) * Math.atan(tanFOV * ( window.innerHeight / windowHeight ));
+
+                camera.updateProjectionMatrix();
+                camera.lookAt(scene.position);
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.render(scene, camera);
+
+            }
+
+            updateFcts.push(function (delta, now) {
+                videoTexture.update(delta, now)
+            });
+
+            // use the texture in a THREE.Mesh
+            console.log(video.videoWidth + "x" + video.videoHeight);
+            var geometry = new THREE.CubeGeometry(video.videoWidth / video.videoHeight, 1, 1);
+            var material = new THREE.MeshBasicMaterial({
+                map: videoTexture.texture
+            });
+            var mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            updateFcts.push(function (delta, now) {
+                if (!video.paused) {
+                    //mesh.rotation.x += 0.01 * delta + 0.01 *Math.sin(mesh.rotation.x);
+                    //mesh.rotation.y += 0.02 * delta //+ 0.01 *Math.cos(mesh.rotation.y);
+                }
+            });
+
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		Camera Controls							//
+            //////////////////////////////////////////////////////////////////////////////////
+            var mouse = {x: 0, y: 0};
+            document.addEventListener('mousemove', function (event) {
+                mouse.x = (event.clientX / window.innerWidth ) - 0.5;
+                mouse.y = ((window.innerHeight - event.clientY) / window.innerHeight) - 0.5;
+
+                // switch to window center when we're not over canvas
+                var x = event.clientX, y = event.clientY;
+                mouseOverElement = document.elementFromPoint(x, y);
+                if (mouseOverElement.nodeName != 'CANVAS') {
+                    mouse.x = 0;
+                    mouse.y = 0
+                }
+            }, false);
+            updateFcts.push(function (delta, now) {
+                camera.position.x += (mouse.x * 0.3 * camera.position.z - 0.5 * camera.position.x) * (delta * 3) ;
+                camera.position.y += (mouse.y * 0.3 * camera.position.z - 0.5 * camera.position.y ) * (delta * 3) ;
+                camera.lookAt(scene.position)
+            });
+
+            $('body').on('mousewheel', function (e){
+                var mouseX = (e.clientX - (window.innerWidth/2)) * 10;
+                var mouseY = (e.clientY - (window.innerHeight/2)) * 10;
+      
+                if(e.originalEvent.deltaY < 0){ // zoom to the front
+                  if(camera.position.z > 10) {
+                    return
+                  }
+                  //camera.position.x -= mouseX * .00125;
+                  //camera.position.y += mouseY * .00125;
+                  camera.position.z += 1.1 * 0.1;
+                } else {                          // zoom to the back
+                if(camera.position.z < 2) {
+                  return
+                }
+                //camera.position.x += mouseX * .00125;
+                //camera.position.y -= mouseY * .00125;
+                camera.position.z -= 1.1 * 0.1;
+              }
+
+              console.log(camera.position.z)
+            });
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		render the scene						//
+            //////////////////////////////////////////////////////////////////////////////////
+
+            // init Stats
+            var stats = new Stats();
+            document.body.appendChild(stats.domElement);
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.left = '0px';
+            stats.domElement.style.bottom = '0px';
+            updateFcts.push(function () {
+                stats.update()
+            });
+
+
+            updateFcts.push(function () {
+                renderer.render(scene, camera);
+            });
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		loop runner							//
+            //////////////////////////////////////////////////////////////////////////////////
+            var lastTimeMsec = null;
+            requestAnimationFrame(function animate(nowMsec) {
+                if (!video.paused) {
+                    videoOptions.frame = parseInt(video.currentTime)
+                }
+
+                if (video.currentTime >= video.duration * framerate - 1) {
+                    video.currentTime = 0
+                }
+
+                updateInfo();
+
+                // keep looping
+                requestAnimationFrame(animate);
+
+                // measure time
+                lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
+                var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+                lastTimeMsec = nowMsec;
+
+                // call each update function
+                updateFcts.forEach(function (updateFn) {
+                    updateFn(deltaMsec / 1000, nowMsec / 1000)
+                })
+            });
+
+            // video.play()
+
+            // get metainfo
+            $.getJSON(urlInfo, function (json) {
+                console.log('Json loaded');
+                info = json.features;
+
+                /*
+                 info.sort(function (a, b) {
+                 return a.properties['system:time_start'] - b.properties['system:time_start']
+                 });
+                 */
+
+                //onSpeak()
+            });
+        });
+    };
+</script>
+</body>
+</html>
