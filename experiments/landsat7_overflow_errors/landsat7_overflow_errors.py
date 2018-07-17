@@ -64,12 +64,12 @@ def read_band(scene_dir, band, offset, count):
     return (data, props)
 
 def plot_values(data_frame):
-    canvas = ds.Canvas(plot_width=700, plot_height=700, x_range=(0, 0.5), y_range=(0, 0.5))
+    canvas = ds.Canvas(plot_width=1000, plot_height=1000, x_range=(0, 1), y_range=(0, 1))
     agg = canvas.points(data_frame, 'B2', 'B5')
 
-    image = tf.shade(agg, cmap=['lightblue', 'darkblue'], how='eq_hist')
-    # image = tf.set_background(image, color='#ffffff')
-    # image = tf.spread(image, px=5)
+    image = tf.shade(agg, cmap=['lightblue', 'darkblue'], how='linear', alpha=150)
+    image = tf.spread(image, px=1)
+    image = tf.set_background(image, color='#222222')
 
     return image
 
