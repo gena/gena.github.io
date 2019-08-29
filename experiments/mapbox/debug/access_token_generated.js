@@ -20,3 +20,4 @@ function getURLParameter(name) {
     var output = regexp.exec(window.location.href);
     return output && output[1];
 }
+ 
