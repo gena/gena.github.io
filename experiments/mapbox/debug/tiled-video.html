@@ -11,19 +11,25 @@
         html, body, #map { height: 100%; }
         #playbutton { top: 30px; left: 10px; }
         #panel { margin-left: 5px; margin-bottom: 35px; width: 500px; height: 80px; background-color: white; opacity: 0.9; }
+        #boundscheckbox { position: absolute; top: 40px; left: 80px; }
+        #boundscheckboxlabel { position: absolute; top: 40px; left: 100px; }
     </style>
 </head>
 
 <body onload="onLoad()">
 <div id="map"></div>
 
-<div id="panel" class="pin-bottom flex-parent flex-parent--center-main pt36 bg-white z100 ">
-    <div class="flex-child bg-white round relative w600">
+<div id="panel" class="pin-bottom pt36 bg-white z100 ">
+    <div class="bg-white round relative w600">
         <div class="pin-top pad1 z100 col12 bg-white">
             <input class="timeslider col12 fr" id="timeslider" title="slider" type="range" min="0" max="8.75" step="0.2" value="0" />
         </div>
         
         <div id="playbutton" class="button z100" onclick="togglePlayback()">Play</div>
+
+        <input id="boundscheckbox" checked type='checkbox' onclick="toggleShowBounds()"/>
+        <div id="boundscheckboxlabel">Show bounds</div>
+
 
         <!-- <div class="px24 py24">
         <div class="txt-l mb12">Modal title</div>
@@ -34,7 +40,7 @@
     </div>
 </div>
 
-<script src="../dist/mapbox-gl.js"></script>
+<script src="../dist/mapbox-gl-dev.js"></script>
 <script src="access_token_generated.js"></script>
 
 <script>
@@ -44,7 +50,7 @@ var videoStyle = {
         "source1": {
             "type": "video-tiled",
             "tiles": [
-                "https://storage.googleapis.com/deltares-video-map/mapbox-test/test1/{z}/{x}/{y}.webm"
+                "http://localhost:9966/media/{z}/{x}/{y}.webm"
             ],
             tileSize: 512,
             playbackRate: 0.2,
@@ -121,10 +127,14 @@ function togglePlayback() {
     button.innerText = playing ? 'Pause' : 'Play'
 
     if(playing) {
-        getPlayer().play(150)
+        getPlayer().play(100)
     } else {
         getPlayer().pause()
     }
+}
+
+function toggleShowBounds() {
+    map.showTileBoundaries = !map.showTileBoundaries
 }
 
 </script>
