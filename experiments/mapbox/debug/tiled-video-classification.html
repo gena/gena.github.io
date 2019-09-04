@@ -53,7 +53,7 @@ var videoStyle = {
                 "https://storage.googleapis.com/vegetatiemonitor/classificatie-video/{z}/{x}/{y}.webm"
             ],
             tileSize: 512,
-            playbackRate: 0.2,
+            playbackRate: 15,
             maxzoom: 14,
             minzoom: 9,
             scheme: "xyz",
@@ -127,7 +127,7 @@ function togglePlayback() {
     button.innerText = playing ? 'Pause' : 'Play'
 
     if(playing) {
-        getPlayer().play(100)
+        getPlayer().play(100, 1)
     } else {
         getPlayer().pause()
     }
