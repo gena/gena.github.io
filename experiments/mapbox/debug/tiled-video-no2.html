@@ -256,7 +256,8 @@ let times = [
         player.onTimeChanged = t => {
             slider.value = t
 
-            timelabel.textContent = 'Time: ' + times[Math.floor(t * 10)] + ', visible videos: ' + player.videos.length
+            timelabel.textContent = 'Time: ' + times[Math.floor(t * 10)]
+            // + ', visible videos: ' + player.videos.length
         }
 
         var stats = new Stats();
