@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapbox GL JS debug page</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="../dist/mapbox-gl.css" />
+    <link href="https://www.mapbox.com/base/latest/base.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+        #playbutton { top: 30px; left: 10px; }
+        #panel { margin-left: 5px; margin-bottom: 35px; width: 500px; height: 80px; background-color: white; opacity: 0.9; }
+        #boundscheckbox { position: absolute; top: 40px; left: 80px; }
+        #boundscheckboxlabel { position: absolute; top: 40px; left: 100px; }
+        #timelabel {
+            position: absolute;
+            top: 1%;
+            left: 1%;
+            z-index: 100;
+            text-shadow: 1px 1px 2px #000000e0, 0 0 15px #f8f8f8;
+            font-size: 16px;
+            color: seashell;
+        }
+    </style>
+</head>
+
+<!-- NOTE: initialize map after the body is loaded, otherwise initial video fetching crashes badly -->
+<body onload="onLoad()">
+
+<div id="map"></div>
+
+<div id="timelabel"></div>
+
+<div id="panel" class="pin-bottom pt36 bg-white z100 ">
+    <div class="bg-white round relative w600">
+        <div class="pin-top pad1 z100 col12 bg-white">
+            <!-- <input class="timeslider col12 fr" id="timeslider" title="slider" type="range" min="0" max="11.0" step="0.1" value="0" /> -->
+            <input class="timeslider col12 fr" id="timeslider" title="slider" type="range" min="0" max="6.2" step="0.1" value="0" />
+        </div>
+        
+        <div id="playbutton" class="button z100" onclick="togglePlayback()">Play</div>
+
+        <!-- <input id="boundscheckbox" checked type='checkbox' onclick="toggleShowBounds()"/> 
+        <div id="boundscheckboxlabel">Show bounds</div> -->
+      </div>
+    </div>
+</div>
+
+<script src="../dist/mapbox-gl-dev.js"></script>
+<script src="access_token_generated.js"></script>
+<script type="text/javascript" src="stats.min.js"></script>
+
+<script>
+
+var videoStyle = {
+    "version": 8,
+    "sources": {
+        "source1": {
+            type: "video-tiled",
+            tiles: [ "https://storage.googleapis.com/deltares-video-map/no2-timelapse-video/{z}/{x}/{y}.webm" ], max: 6.2, center: [0, 0], zoom: 2, minzoom: 0, maxzoom: 5,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/viirs-video/{z}/{x}/{y}.webm" ], max: 6.7, center: [0, 0], zoom: 0, minzoom: 0, maxzoom: 6,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/s1-ice-video/{z}/{x}/{y}.webm" ], max: 12.0, center: [-105.98, -73.71], zoom: 5, minzoom: 0, maxzoom: 9,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/sdb-rgb-v3.3-video/{z}/{x}/{y}.webm" ], max: 1.6, center: [6.6579, 53.5825], zoom: 9.8, minzoom: 4, maxzoom: 13,
+            // tiles: [ "http://localhost:9966/media/dam-Merowe-v2-video/{z}/{x}/{y}.webm" ], max: 11, center: [35.9824, 14.2541], zoom: 11, minzoom: 0, maxzoom: 12,
+            scheme: "xyz",
+            tileSize: 512,
+            // tileSize: 256,
+            playbackRate: 1,
+            // geometryFilter: 'https://storage.googleapis.com/deltares-video-map/dam-Merowe-video/geometry.geojson'
+            // geometryFilter: 'http://localhost:9966/media/dam-Merowe-video/geometry.geojson'
+            // geometryFilter: 'https://storage.googleapis.com/deltares-video-map/s1-ice-video/geometry.geojson'
+        }
+/*
+,
+        "satellite": {
+            "type": "raster",
+            "url": "mapbox://mapbox.satellite",
+            "tileSize": 256
+        }
+*/
+    },
+    "layers": [{
+        "id": "background",
+        "type": "background",
+        "paint": {
+            "background-color": "rgb(4,7,14)"
+        }
+    }
+/*
+    , {
+        "id": "satellite",
+        "type": "raster",
+        "paint": {
+            "raster-saturation": -1,
+            "raster-brightness-max": 0.6
+        },
+        "source": "satellite"
+    }
+*/
+    , {
+        "id": "layer1",
+        "type": "raster",
+        "source": "source1"
+    }
+    // , {
+    //     "id": "filter",
+    //     "type": "line",
+    //     "paint": {
+    //     "line-color": "#888",
+    //     "line-width": 8
+    //     },
+    //     "source": "filter"
+    // }
+    ]
+};
+
+let map = null
+
+function onLoad() {
+    map = window.map = new mapboxgl.Map({
+        container: 'map',
+        // pitch: 42, // pitch in degrees
+        // bearing: 26, // bearing in degrees    
+        zoom: videoStyle.sources.source1.zoom,
+        center: videoStyle.sources.source1.center,
+        style: 'mapbox://styles/mapbox/dark-v10',
+        //style: videoStyle,
+        hash: false
+    });
+
+    map.addControl(new mapboxgl.NavigationControl());
+    map.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+
+    map.showTileBoundaries = false;
+
+    let slider = document.getElementById('timeslider')
+
+    slider.max = videoStyle.sources.source1.max
+    console.log('MAX' + slider.max)
+
+
+    let timelabel = document.getElementById('timelabel')
+
+let times = [
+  "2020-02-01",
+  "2020-02-02",
+  "2020-02-03",
+  "2020-02-04",
+  "2020-02-05",
+  "2020-02-06",
+  "2020-02-07",
+  "2020-02-08",
+  "2020-02-09",
+  "2020-02-10",
+  "2020-02-11",
+  "2020-02-12",
+  "2020-02-13",
+  "2020-02-14",
+  "2020-02-15",
+  "2020-02-16",
+  "2020-02-17",
+  "2020-02-18",
+  "2020-02-19",
+  "2020-02-20",
+  "2020-02-21",
+  "2020-02-22",
+  "2020-02-23",
+  "2020-02-24",
+  "2020-02-25",
+  "2020-02-26",
+  "2020-02-27",
+  "2020-02-28",
+  "2020-02-29",
+  "2020-03-01",
+  "2020-03-02",
+  "2020-03-03",
+  "2020-03-04",
+  "2020-03-05",
+  "2020-03-06",
+  "2020-03-07",
+  "2020-03-08",
+  "2020-03-09",
+  "2020-03-19",
+  "2020-03-11",
+  "2020-03-12",
+  "2020-03-13",
+  "2020-03-14",
+  "2020-03-15",
+  "2020-03-16",
+  "2020-03-17",
+  "2020-03-18",
+  "2020-03-19",
+  "2020-03-20",
+  "2020-03-21",
+  "2020-03-22",
+  "2020-03-23",
+  "2020-03-24",
+  "2020-03-25",
+  "2020-03-26",
+  "2020-03-27",
+  "2020-03-28",
+  "2020-03-29",
+  "2020-03-30",
+  "2020-03-31",
+  "2020-04-01",
+  "2020-04-02",
+  "2020-04-03",
+]
+
+
+    map.on('style.load', () => {
+        var layers = map.getStyle().layers;
+        // Find the index of the first symbol layer in the map style
+        var firstSymbolId;
+        for (var i = 0; i < layers.length; i++) {
+            if (layers[i].id === 'admin-1-boundary-bg') {
+                firstSymbolId = layers[i].id;
+                 break;
+            }
+         }
+         map.addSource('source1', {
+            type: "video-tiled",
+            tiles: [ "http://localhost:9966/media/no2-timelapse-video/{z}/{x}/{y}.webm" ], max: 6.2, center: [0, 0], zoom: 2, minzoom: 0, maxzoom: 5,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/viirs-video/{z}/{x}/{y}.webm" ], max: 6.7, center: [0, 0], zoom: 0, minzoom: 0, maxzoom: 6,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/s1-ice-video/{z}/{x}/{y}.webm" ], max: 12.0, center: [-105.98, -73.71], zoom: 5, minzoom: 0, maxzoom: 9,
+            // tiles: [ "https://storage.googleapis.com/deltares-video-map/sdb-rgb-v3.3-video/{z}/{x}/{y}.webm" ], max: 1.6, center: [6.6579, 53.5825], zoom: 9.8, minzoom: 4, maxzoom: 13,
+            // tiles: [ "http://localhost:9966/media/dam-Merowe-v2-video/{z}/{x}/{y}.webm" ], max: 11, center: [35.9824, 14.2541], zoom: 11, minzoom: 0, maxzoom: 12,
+            scheme: "xyz",
+            tileSize: 512,
+            // tileSize: 256,
+            playbackRate: 1,
+            // geometryFilter: 'https://storage.googleapis.com/deltares-video-map/dam-Merowe-video/geometry.geojson'
+            // geometryFilter: 'http://localhost:9966/media/dam-Merowe-video/geometry.geojson'
+            // geometryFilter: 'https://storage.googleapis.com/deltares-video-map/s1-ice-video/geometry.geojson'
+         });
+
+         map.addLayer({
+            id: 'no2',
+            type: "raster",
+            source: "source1",
+            opacity: 0.5
+         }, firstSymbolId);
+
+         map.addLayer({
+            id: 'water2',
+            type: "line",
+            source: "composite",
+            'source-layer': "water",
+            paint: { 'line-color': "rgba(0, 0, 0, 0.5)"}
+         }, firstSymbolId);
+
+        let player = getPlayer()
+        
+        player.onTimeChanged = t => {
+            slider.value = t
+
+            timelabel.textContent = 'Time: ' + times[Math.floor(t * 10)] + ', visible videos: ' + player.videos.length
+        }
+
+        var stats = new Stats();
+        stats.showPanel(1); // 0: fps, 1: ms, 2: mb, 3+: custom
+        stats.dom.style.top = '50px';
+        stats.dom.style.left = '10px';
+        document.body.appendChild(stats.dom);
+        
+        player.onBeforeVideoSync = () => {
+            stats.begin()
+        }
+
+        player.onAfterVideoSync = () => {
+            stats.end()
+        }
+    })
+
+
+    slider.addEventListener('input', function() {
+        let currentTime = parseFloat(this.value)
+
+        console.log(currentTime)
+        getPlayer().setCurrentTime(currentTime)
+    });
+
+    setTimeout(function(){ togglePlayback(); }, 2000);
+    
+}
+
+let playing = false;
+
+function getPlayer() {
+    return map.getSource('source1').player
+}
+
+function togglePlayback() {
+    playing = !playing;
+
+    let button = document.getElementById('playbutton')
+    button.innerText = playing ? 'Pause' : 'Play'
+
+    if(playing) {
+        let maxFps = 15
+        let step = 0.1 // step to seek for the next frame, depends on video FPS
+        getPlayer().play(maxFps, step)
+    } else {
+        getPlayer().pause()
+    }
+}
+
+function toggleShowBounds() {
+    map.showTileBoundaries = !map.showTileBoundaries
+}
+
+</script>
+</body>
+</html>
