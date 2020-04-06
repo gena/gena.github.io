@@ -10,16 +10,17 @@
         body { margin: 0; padding: 0; }
         html, body, #map { height: 100%; }
         #playbutton { top: 30px; left: 10px; }
-        #panel { margin-left: 5px; margin-bottom: 35px; width: 500px; height: 80px; background-color: white; opacity: 0.9; }
+        #panel { margin-left: 5px; margin-bottom: 35px; width: 300px; height: 80px; background-color: white; opacity: 0.9; }
         #boundscheckbox { position: absolute; top: 40px; left: 80px; }
         #boundscheckboxlabel { position: absolute; top: 40px; left: 100px; }
+
         #timelabel {
             position: absolute;
-            top: 1%;
-            left: 1%;
+            bottom: 140px;
+            left: 15px;
             z-index: 100;
             text-shadow: 1px 1px 2px #000000e0, 0 0 15px #f8f8f8;
-            font-size: 24px;
+            font-size: 32px;
             color: seashell;
         }
     </style>
@@ -222,7 +223,7 @@ let times = [
          }
          map.addSource('source1', {
             type: "video-tiled",
-            tiles: [ "https://storage.googleapis.com/deltares-video-map/no2-timelapse-video/{z}/{x}/{y}.webm" ], max: 6.2, center: [0, 0], zoom: 2, minzoom: 0, maxzoom: 5,
+            tiles: [ "http://localhost:9966/media/no2-timelapse-video/{z}/{x}/{y}.webm" ], max: 6.2, center: [0, 0], zoom: 2, minzoom: 0, maxzoom: 5,
             // tiles: [ "https://storage.googleapis.com/deltares-video-map/viirs-video/{z}/{x}/{y}.webm" ], max: 6.7, center: [0, 0], zoom: 0, minzoom: 0, maxzoom: 6,
             // tiles: [ "https://storage.googleapis.com/deltares-video-map/s1-ice-video/{z}/{x}/{y}.webm" ], max: 12.0, center: [-105.98, -73.71], zoom: 5, minzoom: 0, maxzoom: 9,
             // tiles: [ "https://storage.googleapis.com/deltares-video-map/sdb-rgb-v3.3-video/{z}/{x}/{y}.webm" ], max: 1.6, center: [6.6579, 53.5825], zoom: 9.8, minzoom: 4, maxzoom: 13,
@@ -256,13 +257,13 @@ let times = [
         player.onTimeChanged = t => {
             slider.value = t
 
-            timelabel.textContent = 'Time: ' + times[Math.floor(t * 10)]
-            // + ', visible videos: ' + player.videos.length
+            timelabel.textContent = times[Math.floor(t * 10)] 
+            //+ ', visible videos: ' + player.videos.length
         }
 
         var stats = new Stats();
         stats.showPanel(1); // 0: fps, 1: ms, 2: mb, 3+: custom
-        stats.dom.style.top = '50px';
+        stats.dom.style.top = '10px';
         stats.dom.style.left = '10px';
         document.body.appendChild(stats.dom);
         
